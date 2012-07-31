@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <cups/cups.h>
+#include "config.h"
 #include <freerdp/utils/memory.h>
 #include <freerdp/utils/svc_plugin.h>
 
