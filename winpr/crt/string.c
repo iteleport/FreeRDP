@@ -50,11 +50,11 @@ WCHAR* _wcsdup(const WCHAR* strSource)
 
 #if sun
 	strDestination = wsdup(strSource);
-#elif defined(__APPLE__) && defined(__MACH__)
-	strDestination = malloc(wcslen(strSource));
+#elif defined(__APPLE__) && defined(__MACH__) || defined(ANDROID)
+	strDestination = malloc(wcslen((wchar_t*)strSource));
 
 	if (strDestination != NULL)
-		wcscpy(strDestination, strSource);
+		wcscpy((wchar_t*)strDestination, (const wchar_t*)strSource);
 #else
 	strDestination = (WCHAR*) wcsdup((wchar_t*) strSource);
 #endif
@@ -63,6 +63,16 @@ WCHAR* _wcsdup(const WCHAR* strSource)
 		perror("wcsdup");
 
 	return strDestination;
+}
+
+int _stricmp(const char* string1, const char* string2)
+{
+	return strcasecmp(string1, string2);
+}
+
+char* strtok_s(char* strToken, const char* strDelimit, char** context)
+{
+	return strtok_r(strToken, strDelimit, context);
 }
 
 /* Windows API Sets - api-ms-win-core-string-l2-1-0.dll

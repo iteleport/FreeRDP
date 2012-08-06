@@ -33,7 +33,7 @@
 
 static const char client_dll[] = "C:\\Windows\\System32\\mstscax.dll";
 
-void settings_load_hkey_local_machine(rdpSettings* settings)
+void settings_client_load_hkey_local_machine(rdpSettings* settings)
 {
 	HKEY hKey;
 	LONG status;
@@ -41,7 +41,7 @@ void settings_load_hkey_local_machine(rdpSettings* settings)
 	DWORD dwSize;
 	DWORD dwValue;
 
-	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Software\\FreeRDP\\Client"), 0, KEY_READ, &hKey);
+	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Software\\FreeRDP\\Client"), 0, KEY_READ | KEY_WOW64_64KEY, &hKey);
 
 	if (status != ERROR_SUCCESS)
 		return;
@@ -76,6 +76,39 @@ void settings_load_hkey_local_machine(rdpSettings* settings)
 	RegCloseKey(hKey);
 }
 
+void settings_server_load_hkey_local_machine(rdpSettings* settings)
+{
+	HKEY hKey;
+	LONG status;
+	DWORD dwType;
+	DWORD dwSize;
+	DWORD dwValue;
+
+	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Software\\FreeRDP\\Server"), 0, KEY_READ | KEY_WOW64_64KEY, &hKey);
+
+	if (status != ERROR_SUCCESS)
+		return;
+
+	if (RegQueryValueEx(hKey, _T("NlaSecurity"), NULL, &dwType, (BYTE*) &dwValue, &dwSize) == ERROR_SUCCESS)
+		settings->nla_security = dwValue ? 1 : 0;
+
+	if (RegQueryValueEx(hKey, _T("TlsSecurity"), NULL, &dwType, (BYTE*) &dwValue, &dwSize) == ERROR_SUCCESS)
+		settings->tls_security = dwValue ? 1 : 0;
+
+	if (RegQueryValueEx(hKey, _T("RdpSecurity"), NULL, &dwType, (BYTE*) &dwValue, &dwSize) == ERROR_SUCCESS)
+		settings->rdp_security = dwValue ? 1 : 0;
+
+	RegCloseKey(hKey);
+}
+
+void settings_load_hkey_local_machine(rdpSettings* settings)
+{
+	if (settings->server_mode)
+		settings_server_load_hkey_local_machine(settings);
+	else
+		settings_client_load_hkey_local_machine(settings);
+}
+
 rdpSettings* settings_new(void* instance)
 {
 	rdpSettings* settings;
@@ -85,6 +118,11 @@ rdpSettings* settings_new(void* instance)
 	if (settings != NULL)
 	{
 		settings->instance = instance;
+
+		/* Server instances are NULL */
+
+		if (!settings->instance)
+			settings->server_mode = true;
 
 		settings->width = 1024;
 		settings->height = 768;
@@ -97,6 +135,7 @@ rdpSettings* settings_new(void* instance)
 		settings->nla_security = true;
 		settings->tls_security = true;
 		settings->rdp_security = true;
+		settings->security_layer_negotiation = true;
 		settings->client_build = 2600;
 		settings->kbd_type = 4; /* @msdn{cc240510} 'IBM enhanced (101- or 102-key) keyboard' */
 		settings->kbd_subtype = 0;
@@ -201,7 +240,7 @@ rdpSettings* settings_new(void* instance)
 
 		settings->offscreen_bitmap_cache = true;
 		settings->offscreen_bitmap_cache_size = 7680;
-		settings->offscreen_bitmap_cache_entries = 100;
+		settings->offscreen_bitmap_cache_entries = 2000;
 
 		settings->draw_nine_grid_cache_size = 2560;
 		settings->draw_nine_grid_cache_entries = 256;

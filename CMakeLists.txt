@@ -44,6 +44,9 @@ set(FREERDP_VERSION_MINOR "0")
 set(FREERDP_VERSION_REVISION "1")
 set(FREERDP_VERSION "${FREERDP_VERSION_MAJOR}.${FREERDP_VERSION_MINOR}")
 set(FREERDP_VERSION_FULL "${FREERDP_VERSION}.${FREERDP_VERSION_REVISION}")
+include(GetGitRevisionDescription)
+git_describe(GIT_REVISION --match "[0-9]*" --abbrev=4 --tags --always)
+message(STATUS "Git Revision ${GIT_REVISION}")
 
 # Default to release build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -105,14 +108,24 @@ endif()
 
 # Mac OS X
 if(APPLE)
-	include_directories(/opt/local/include)
-	link_directories(/opt/local/lib)
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -mmacosx-version-min=10.4")
+	if(IS_DIRECTORY /opt/local/include)
+		include_directories(/opt/local/include)
+		link_directories(/opt/local/lib)
+	endif()
+	
+	option(WITH_CLANG "Build using clang" OFF)
+	if(WITH_CLANG)
+		set(CMAKE_C_COMPILER "clang")
+	endif()
+	
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.4")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl-framework,CoreFoundation")	
 endif()
 
 if(NOT WIN32)
 	find_required_package(ZLIB)
 	find_optional_package(PulseAudio)
+	find_optional_package(MacAudio)
 	find_optional_package(PCSC)
 	find_suggested_package(Cups)
 
@@ -133,6 +146,9 @@ set(FREERDP_KEYMAP_PATH "${FREERDP_DATA_PATH}/keymaps")
 # Path to put plugins
 set(FREERDP_PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/freerdp")
 
+# Path to put extensions
+set(FREERDP_EXTENSION_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/freerdp/extensions")
+
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -141,8 +157,10 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Generate pkg-config
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+if(NOT MSVC)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/freerdp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc @ONLY)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/freerdp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 # Build CUnit
 find_optional_package(CUnit)
@@ -166,9 +184,7 @@ add_subdirectory(libfreerdp-channels)
 add_subdirectory(libfreerdp-locale)
 add_subdirectory(libfreerdp-core)
 
-if(NOT WIN32)
-	add_subdirectory(channels)
-endif()
+add_subdirectory(channels)
 
 option(WITH_CLIENT "Build client binaries" ON)
 if(WITH_CLIENT)
@@ -180,7 +196,9 @@ if(WITH_SERVER)
 	add_subdirectory(server)
 endif()
 
-add_subdirectory(keymaps)
+if(NOT MSVC)
+	add_subdirectory(keymaps)
+endif()
 
 # Source package
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\.git/;/\\\\.gitignore;/CMakeCache.txt")
