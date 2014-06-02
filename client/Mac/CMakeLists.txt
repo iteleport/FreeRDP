@@ -1,149 +1,174 @@
+project(MacFreeRDP-library)
 
-cmake_minimum_required (VERSION 2.8) 
-project (MacFreeRDP) 
-set(CMAKE_COLOR_MAKEFILE ON)
+set(MODULE_NAME "MacFreeRDP-library")
+set(MODULE_OUTPUT_NAME "MacFreeRDP")
+set(MODULE_PREFIX "FREERDP_CLIENT_MAC-LIB")
 
-include(CheckIncludeFiles)
-include(CheckLibraryExists)
-include(CheckStructHasMember)
-include(FindPkgConfig)
-include(TestBigEndian)
+# Import frameworks
+find_library(FOUNDATION_LIBRARY Foundation)
+find_library(COCOA_LIBRARY Cocoa)
+find_library(APPKIT_LIBRARY AppKit)
 
-# Include our extra modules
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../cmake/)
+mark_as_advanced(COCOA_LIBRARY FOUNDATION_LIBRARY APPKIT_LIBRARY)
+set(EXTRA_LIBS ${COCOA_LIBRARY} ${FOUNDATION_LIBRARY} ${APPKIT_LIBRARY})
 
-include(AutoVersioning)
-include(ConfigOptions)
-include(FindOptionalPackage)
-include(CheckCCompilerFlag)
-include(GNUInstallDirsWrapper)
+set(MACOSX_BUNDLE_INFO_STRING "${MODULE_OUTPUT_NAME}")
+set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.freerdp.mac")
+set(MACOSX_BUNDLE_BUNDLE_IDENTIFIER "FreeRDP-library.Mac")
+set(MACOSX_BUNDLE_LONG_VERSION_STRING "MacFreeRDP library Version 1.1")
+set(MACOSX_BUNDLE_BUNDLE_NAME "${MODULE_OUTPUT_NAME}")
+set(MACOSX_BUNDLE_SHORT_VERSION_STRING 1.1.0)
+set(MACOSX_BUNDLE_BUNDLE_VERSION 1.1.0)
+set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2013. All Rights Reserved.")
 
-# Default to debug build type
-if(NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE "Debug")
-endif()
-
-# Default to build shared libs
-if(NOT DEFINED BUILD_SHARED_LIBS)
-    set(BUILD_SHARED_LIBS ON)
-endif()
-
-# Compiler-specific flags
-if(CMAKE_COMPILER_IS_GNUCC)
-	if(CMAKE_BUILD_TYPE STREQUAL "Release")
-		set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-	endif()
-	if(WITH_SSE2_TARGET)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
-	endif()
-endif()
-
-# Libraries that we have a hard dependency on
-if(NOT DEFINED OPENSSL_INCLUDE_DIR OR NOT DEFINED OPENSSL_LIBRARIES)
-    find_required_package(OpenSSL)
-endif()
-
-# Mac OS X
-if(APPLE)
-	# Set the include files for FreeRDP to the relative path
-	set(FREERDP_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/../../include/)
-	set(FRAMEWORK_HEADERS_PATH /System/Library/Frameworks/Cocoa.framework/Versions/A/Headers/)
-	include_directories (${FREERDP_INCLUDE_PATH} ${FRAMEWORK_HEADERS_PATH} /System/Library/Frameworks) 
-	
-	# set(CMAKE_OSX_SYSROOT MacOSX10.7.sdk) # uncomment to specify SDK version
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -mmacosx-version-min=10.4")
-	set(GUI_TYPE MACOSX_BUNDLE)
-	
-	# Import libraries
-	find_library(FOUNDATION_LIBRARY Foundation)
-	message("+ Using foundation library ${FOUNDATION_LIBRARY}")
-	find_library(COCOA_LIBRARY Cocoa)
-	message("+ Using cocoa library ${COCOA_LIBRARY}")
-	find_library(APPKIT_LIBRARY AppKit)
-	message("+ Using appkit library ${APPKIT_LIBRARY}")
-	
-	message(" Current source dir: ${CMAKE_CURRENT_SOURCE_DIR}")
-	# Set the OS X Bundle specific CMake variables which will be used to populate the plist for
-	# the application bundle
-	set(MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME}")
-	set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.freerdp.mac")
-	set(MACOSX_BUNDLE_BUNDLE_IDENTIFIER "FreeRDP.Mac")
-	set(MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJECT_NAME} Version 1.0.1")
-	set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
-	set(MACOSX_BUNDLE_SHORT_VERSION_STRING 1.0.1)
-	set(MACOSX_BUNDLE_BUNDLE_VERSION 1.0.1)
-	set(MACOSX_BUNDLE_COPYRIGHT "Copyright 2012. All Rights Reserved.")
-
-	# Specific plist and NOT standard CMake variables
-	set(MACOSX_BUNDLE_NSMAIN_NIB_FILE "MainMenu")
-	set(MACOSX_BUNDLE_NSPRINCIPAL_CLASS "NSApplication")
-	
-	mark_as_advanced(COCOA_LIBRARY
-						FOUNDATION_LIBRARY
-						APPKIT_LIBRARY)
-	set(EXTRA_LIBS ${COCOA_LIBRARY} ${FOUNDATION_LIBRARY} ${APPKIT_LIBRARY})
-	set(APP_TYPE MACOSX_BUNDLE)
-endif()
+set(${MODULE_NAME}_RESOURCES "en.lproj/InfoPlist.strings")
 
 # OS X Interface Builder files
-set (MacFreeRDP_XIBS
-  	MainMenu.xib
-	Credits.rtf
-)
+file(GLOB ${MODULE_NAME}_XIBS *.xib)
 
-# Headers
-set (MacFreeRDP_Headers
-	MRDPCursor.h
-	MRDPView.h 
-	AppDelegate.h)
+# source files
+file(GLOB ${MODULE_NAME}_SRC *.c *.m)
 
-# Source
-set (MacFreeRDP_Source
-	MRDPCursor.m 
-	MRDPView.m
-	AppDelegate.m
-	main.m)
+# header files
+file(GLOB ${MODULE_NAME}_HEADERS *.h)
 
-add_executable(MacFreeRDP 
-	${APP_TYPE} 
-	${MacFreeRDP_Headers}
-	${MacFreeRDP_Source}
-	${MacFreeRDP_XIBS})
+# Include XIB file in Xcode resources. 
+if("${CMAKE_GENERATOR}" MATCHES "Xcode")
+	message(STATUS "Adding Xcode XIB resources for ${MODULE_NAME}")
+	set(${MODULE_NAME}_RESOURCES ${${MODULE_NAME}_RESOURCES} ${${MODULE_NAME}_XIBS})
+endif()
 
-# This is necessary for the xib file part below
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
+add_library(${MODULE_NAME}
+	SHARED
+	../common/client.c
+	${${MODULE_NAME}_SRC}
+	${${MODULE_NAME}_HEADERS}
+	${${MODULE_NAME}_RESOURCES})
 
-# This allows for automatic xib to nib ibitool
-set_target_properties(MacFreeRDP PROPERTIES RESOURCE "${MacFreeRDP_XIBS}")
+set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME "${MODULE_OUTPUT_NAME}")
 
-# Automatic ref counting
-set_target_properties(MacFreeRDP PROPERTIES XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+# configures the framework to always be looked for in the application bundle in the Frameworks sub-folder.
+SET_TARGET_PROPERTIES(${MODULE_NAME} PROPERTIES XCODE_ATTRIBUTE_INSTALL_PATH @executable_path/../Frameworks/)
+          
+set_target_properties(${MODULE_NAME} PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH} 
+	RUNTIME_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
 
 # Support for automatic reference counting requires non-fragile abi.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fobjc-nonfragile-abi")
 
-# XCode project architecture to native architecture of build machine
-# -----------------------------------------------------------------------------------------------------
-# Issue: Had some issues with FreeRDP project building only 64 bit and
-# MacFreeRDP attempting to link to both 32 and 64 for dual target.
-# In the future the FreeRDP Xcode project should be pulled in for a couple of reasons:
-# 1) better step-into debugging 2) automatic dependency compilation and multi-arch compilation + linkage
-# If you know the solutions for 1 and 2, please add below.
-set_target_properties(MacFreeRDP PROPERTIES XCODE_ATTRIBUTE_ARCHS "$(NATIVE_ARCH_ACTUAL)")
+set_target_properties(${MODULE_NAME} PROPERTIES XCODE_ATTRIBUTE_ARCHS "$(NATIVE_ARCH_ACTUAL)")
 
-# Set the info plist to the custom instance
-set_target_properties(MacFreeRDP PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
+set(MODULE_VERSION, 1.1.0)
 
-if(NOT WIN32)
-	find_optional_package(MacAudio)
+set_target_properties(${MODULE_NAME} PROPERTIES 
+	FRAMEWORK TRUE
+	MACOSX_FRAMEWORK_IDENTIFIER com.awakecoding.${MODULE_NAME}
+	FRAMEWORK_VERSION 1.1.0
+	MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.1.0
+	MACOSX_FRAMEWORK_BUNDLE_VERSION 1.1.0
+	INSTALL_NAME_DIR "@executable_path/../../Frameworks"
+	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+	BUILD_WITH_INSTALL_RPATH 1)  
+
+set(${MODULE_PREFIX}_LIBS ${${MODULE_PREFIX}_LIBS} ${EXTRA_LIBS} freerdp-client)
+
+set_complex_link_libraries(VARIABLE ${MODULE_PREFIX}_LIBS MONOLITHIC ${MONOLITHIC_BUILD}
+	MODULE freerdp
+	MODULES freerdp-core freerdp-cache freerdp-gdi freerdp-codec freerdp-primitives freerdp-rail freerdp-utils)
+
+set_complex_link_libraries(VARIABLE ${MODULE_PREFIX}_LIBS MONOLITHIC ${MONOLITHIC_BUILD}
+	MODULE winpr
+	MODULES winpr-input winpr-crt winpr-utils)
+
+set_target_properties(${MODULE_NAME} PROPERTIES LINK_INTERFACE_LIBRARIES "")
+target_link_libraries(${MODULE_NAME} ${${MODULE_PREFIX}_LIBS})
+
+# Set a list of the dependent targets used by the application. There should be a way to get this list automatically
+# from cmake, but for now I put it down manually. I got the references by calling "otool -L MacFreeRDP-client"
+
+set(DEPENDENCIES "")
+
+foreach(LIB ${${MODULE_PREFIX}_LIBS})
+	get_target_property(LOCATION ${LIB} LOCATION)
+	if(NOT ${LOCATION} MATCHES ".*-NOTFOUND")
+		list(APPEND DEPENDENCIES ${LIB})
+	endif()
+endforeach()
+
+set_property(TARGET ${MODULE_NAME} PROPERTY FOLDER "Client/Mac")
+
+if (${BUILD_SHARED_LIBS})
+	# Add a post-build event to copy the dependent libraries in the framework bundle 
+	# Call install_name_tool to reassign the library install name
+	foreach(LIB ${DEPENDENCIES})
+		# message("adding post-build dependency: ${LIB}")
+		add_custom_command(TARGET ${MODULE_NAME} POST_BUILD 
+			COMMAND "${CMAKE_COMMAND}" -E copy 
+					"$<TARGET_FILE:${LIB}>"
+					"${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Contents/$<TARGET_FILE_NAME:${LIB}>"
+			COMMENT "Copying ${LIB} to output directory"
+			COMMAND install_name_tool -change "$<TARGET_SONAME_FILE:${LIB}>"
+				"@executable_path/../Frameworks/${MODULE_OUTPUT_NAME}.framework/Contents/$<TARGET_FILE_NAME:${LIB}>"
+				"${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/${MODULE_NAME}"
+			COMMENT Setting install name for ${LIB}
+			COMMAND "${CMAKE_COMMAND}" -E echo install_name_tool -change "$<TARGET_SONAME_FILE:${LIB}>"
+				"@executable_path/../Frameworks/${MODULE_OUTPUT_NAME}.framework/Contents/$<TARGET_FILE_NAME:${LIB}>"
+				"${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/${MODULE_NAME}")
+	endforeach()
+
+	# Call install_name_tool to reassign the library install names in dependent libraries
+	foreach(DEST ${DEPENDENCIES})
+		foreach(LIB ${DEPENDENCIES})
+			# message("adding post-build dependency: ${LIB}")
+			add_custom_command(TARGET ${MODULE_NAME} POST_BUILD
+				COMMAND install_name_tool -change "$<TARGET_SONAME_FILE:${LIB}>"
+					"@executable_path/../Frameworks/${MODULE_OUTPUT_NAME}.framework/Contents/$<TARGET_FILE_NAME:${LIB}>"
+					"${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Contents/$<TARGET_FILE_NAME:${DEST}>"
+				COMMENT Setting install name for ${LIB} in module ${DEST})
+		endforeach()
+	endforeach()
+
 endif()
 
-# Add all libraries
-target_link_libraries(MacFreeRDP ${EXTRA_LIBS})
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-core/Debug/libfreerdp-core.dylib)
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-channels/Debug/libfreerdp-channels.dylib)
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-cache/Debug/libfreerdp-cache.dylib)
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-gdi/Debug/libfreerdp-gdi.dylib)
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-utils/Debug/libfreerdp-utils.dylib)
-target_link_libraries(MacFreeRDP ${CMAKE_SOURCE_DIR}/../../xcode/libfreerdp-codec/Debug/libfreerdp-codec.dylib)
+# Add post-build NIB file generation in unix makefiles. XCode handles this implicitly.
+if("${CMAKE_GENERATOR}" MATCHES "Unix Makefiles")
+	message(STATUS "Adding post-build NIB file generation event for ${MODULE_NAME}")
+
+	# Make sure we can find the 'ibtool' program. If we can NOT find it we
+	# skip generation of this project
+	find_program(IBTOOL ibtool HINTS "/usr/bin" "${OSX_DEVELOPER_ROOT}/usr/bin")
+	if (${IBTOOL} STREQUAL "IBTOOL-NOTFOUND")
+		message(SEND_ERROR "ibtool can not be found and is needed to compile the .xib files. It should have been installed with 
+				the Apple developer tools. The default system paths were searched in addition to ${OSX_DEVELOPER_ROOT}/usr/bin")
+	endif()
+
+	# Make sure the 'Resources' Directory is correctly created before we build
+	add_custom_command(TARGET ${MODULE_NAME} PRE_BUILD
+						  COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Versions/${MACOSX_BUNDLE_SHORT_VERSION_STRING}/Resources)
+
+	# Compile the .xib files using the 'ibtool' program with the destination being the app package
+	foreach(xib ${${MODULE_NAME}_XIBS})
+		get_filename_component(XIB_WE ${xib} NAME_WE)
+						 
+		add_custom_command (TARGET ${MODULE_NAME} POST_BUILD 
+			COMMAND ${IBTOOL} --errors --warnings --notices --output-format human-readable-text 
+				--compile ${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Versions/${MACOSX_BUNDLE_SHORT_VERSION_STRING}/Resources/${XIB_WE}.nib ${xib}
+			COMMENT "Compiling ${xib}")
+	endforeach()
+endif()
+
+# Copy the public header files into the framework
+foreach(HEADER ${${MODULE_NAME}_HEADERS})
+	# message("adding post-build dependency: ${LIB}")
+	add_custom_command(TARGET ${MODULE_NAME} POST_BUILD
+		COMMAND ditto ${HEADER} ${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Headers/
+		COMMENT Copying public header files to ${MODULE_NAME})
+endforeach()
+
+# Copy the FreeRDP header files into the framework
+add_custom_command(TARGET ${MODULE_NAME} POST_BUILD
+	COMMAND ditto ${CMAKE_SOURCE_DIR}/include/freerdp ${CMAKE_CURRENT_BINARY_DIR}/$(CONFIGURATION)/${MODULE_OUTPUT_NAME}.framework/Headers/freerdp
+	COMMENT Copying FreeRDP header files to ${MODULE_NAME})
+
+add_subdirectory(cli)

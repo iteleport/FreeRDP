@@ -1,5 +1,5 @@
 /**
- * FreeRDP: A Remote Desktop Protocol client.
+ * FreeRDP: A Remote Desktop Protocol Implementation
  * Audio Virtual Channel Types
  *
  * Copyright 2012 Vic Lee
@@ -17,43 +17,13 @@
  * limitations under the License.
  */
 
-#ifndef __FREERDP_RDPSND_H
-#define __FREERDP_RDPSND_H
+#ifndef FREERDP_CHANNEL_RDPSND_H
+#define FREERDP_CHANNEL_RDPSND_H
 
 #include <freerdp/api.h>
 #include <freerdp/types.h>
 
-typedef struct rdpsnd_format rdpsndFormat;
-struct rdpsnd_format
-{
-	uint16 wFormatTag;
-	uint16 nChannels;
-	uint32 nSamplesPerSec;
-	uint16 nBlockAlign;
-	uint16 wBitsPerSample;
-	uint16 cbSize;
-	uint8* data;
-};
+#include <freerdp/codec/audio.h>
 
-#define SNDC_CLOSE         1
-#define SNDC_WAVE          2
-#define SNDC_SETVOLUME     3
-#define SNDC_SETPITCH      4
-#define SNDC_WAVECONFIRM   5
-#define SNDC_TRAINING      6
-#define SNDC_FORMATS       7
-#define SNDC_CRYPTKEY      8
-#define SNDC_WAVEENCRYPT   9
-#define SNDC_UDPWAVE       10
-#define SNDC_UDPWAVELAST   11
-#define SNDC_QUALITYMODE   12
+#endif /* FREERDP_CHANNEL_RDPSND_H */
 
-#define TSSNDCAPS_ALIVE  1
-#define TSSNDCAPS_VOLUME 2
-#define TSSNDCAPS_PITCH  4
-
-#define DYNAMIC_QUALITY  0x0000
-#define MEDIUM_QUALITY   0x0001
-#define HIGH_QUALITY     0x0002
-
-#endif

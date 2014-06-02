@@ -1,5 +1,5 @@
 /**
- * FreeRDP: A Remote Desktop Protocol Client
+ * FreeRDP: A Remote Desktop Protocol Implementation
  * Windows Clipboard Redirection
  *
  * Copyright 2012 Jason Champion
@@ -19,15 +19,15 @@
 #ifndef __WF_CLIPRDR_H
 #define __WF_CLIPRDR_H
 
-#include "wfreerdp.h"
+#include "wf_interface.h"
 
-void wf_cliprdr_init(wfInfo* wfi, rdpChannels* chanman);
-void wf_cliprdr_uninit(wfInfo* wfi);
-void wf_process_cliprdr_event(wfInfo* wfi, RDP_EVENT* event);
-boolean wf_cliprdr_process_selection_notify(wfInfo* wfi, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-boolean wf_cliprdr_process_selection_request(wfInfo* wfi, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-boolean wf_cliprdr_process_selection_clear(wfInfo* wfi, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-boolean wf_cliprdr_process_property_notify(wfInfo* wfi, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-void wf_cliprdr_check_owner(wfInfo* wfi);
+void wf_cliprdr_init(wfContext* wfc, rdpChannels* channels);
+void wf_cliprdr_uninit(wfContext* wfc);
+void wf_process_cliprdr_event(wfContext* wfc, wMessage* event);
+BOOL wf_cliprdr_process_selection_notify(wfContext* wfc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+BOOL wf_cliprdr_process_selection_request(wfContext* wfc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+BOOL wf_cliprdr_process_selection_clear(wfContext* wfc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+BOOL wf_cliprdr_process_property_notify(wfContext* wfc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+void wf_cliprdr_check_owner(wfContext* wfc);
 
 #endif /* __WF_CLIPRDR_H */

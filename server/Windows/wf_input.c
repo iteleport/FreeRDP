@@ -1,5 +1,5 @@
 /**
- * FreeRDP: A Remote Desktop Protocol Client
+ * FreeRDP: A Remote Desktop Protocol Implementation
  * FreeRDP Windows Server
  *
  * Copyright 2012 Marc-Andre Moreau <marcandre.moreau@gmail.com>
@@ -17,11 +17,16 @@
  * limitations under the License.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <winpr/windows.h>
 
 #include "wf_input.h"
+#include "wf_info.h"
 
-void wf_peer_keyboard_event(rdpInput* input, uint16 flags, uint16 code)
+void wf_peer_keyboard_event(rdpInput* input, UINT16 flags, UINT16 code)
 {
 	INPUT keyboard_event;
 
@@ -41,7 +46,7 @@ void wf_peer_keyboard_event(rdpInput* input, uint16 flags, uint16 code)
 	SendInput(1, &keyboard_event, sizeof(INPUT));
 }
 
-void wf_peer_unicode_keyboard_event(rdpInput* input, uint16 flags, uint16 code)
+void wf_peer_unicode_keyboard_event(rdpInput* input, UINT16 flags, UINT16 code)
 {
 	INPUT keyboard_event;
 
@@ -58,9 +63,10 @@ void wf_peer_unicode_keyboard_event(rdpInput* input, uint16 flags, uint16 code)
 	SendInput(1, &keyboard_event, sizeof(INPUT));
 }
 
-void wf_peer_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
+void wf_peer_mouse_event(rdpInput* input, UINT16 flags, UINT16 x, UINT16 y)
 {
 	INPUT mouse_event;
+	float width, height;
 
 	ZeroMemory(&mouse_event, sizeof(INPUT));
 	mouse_event.type = INPUT_MOUSE;
@@ -77,12 +83,24 @@ void wf_peer_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
 	}
 	else
 	{
+		wfInfo * wfi;
+		
+		wfi = wf_info_get_instance();
+
+		//width and height of primary screen (even in multimon setups
+		width = (float) GetSystemMetrics(SM_CXSCREEN);
+		height = (float) GetSystemMetrics(SM_CYSCREEN);
+
+		x += wfi->servscreen_xoffset;
+		y += wfi->servscreen_yoffset;
+
+		mouse_event.mi.dx = (LONG) ((float) x * (65535.0f / width));
+		mouse_event.mi.dy = (LONG) ((float) y * (65535.0f / height));
+		mouse_event.mi.dwFlags = MOUSEEVENTF_ABSOLUTE;
+
 		if (flags & PTR_FLAGS_MOVE)
 		{
-			mouse_event.mi.dx = x * (0xFFFF / GetSystemMetrics(SM_CXSCREEN));
-			mouse_event.mi.dy = y * (0xFFFF / GetSystemMetrics(SM_CYSCREEN));
-			mouse_event.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-
+			mouse_event.mi.dwFlags |= MOUSEEVENTF_MOVE;
 			SendInput(1, &mouse_event, sizeof(INPUT));
 		}
 
@@ -118,7 +136,7 @@ void wf_peer_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
 	}
 }
 
-void wf_peer_extended_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint16 y)
+void wf_peer_extended_mouse_event(rdpInput* input, UINT16 flags, UINT16 x, UINT16 y)
 {
 	if ((flags & PTR_XFLAGS_BUTTON1) || (flags & PTR_XFLAGS_BUTTON2))
 	{
@@ -129,8 +147,21 @@ void wf_peer_extended_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint1
 
 		if (flags & PTR_FLAGS_MOVE)
 		{
-			mouse_event.mi.dx = x * (0xFFFF / GetSystemMetrics(SM_CXSCREEN));
-			mouse_event.mi.dy = y * (0xFFFF / GetSystemMetrics(SM_CYSCREEN));
+			float width, height;
+			wfInfo * wfi;
+
+			wfi = wf_info_get_instance();
+			//width and height of primary screen (even in multimon setups
+			width = (float) GetSystemMetrics(SM_CXSCREEN);
+			height = (float) GetSystemMetrics(SM_CYSCREEN);
+
+			x += wfi->servscreen_xoffset;
+			y += wfi->servscreen_yoffset;
+
+			//mouse_event.mi.dx = x * (0xFFFF / width);
+			//mouse_event.mi.dy = y * (0xFFFF / height);
+			mouse_event.mi.dx = (LONG) ((float) x * (65535.0f / width));
+			mouse_event.mi.dy = (LONG) ((float) y * (65535.0f / height));
 			mouse_event.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 			SendInput(1, &mouse_event, sizeof(INPUT));
@@ -154,4 +185,21 @@ void wf_peer_extended_mouse_event(rdpInput* input, uint16 flags, uint16 x, uint1
 	{
 		wf_peer_mouse_event(input, flags, x, y);
 	}
+}
+
+
+void wf_peer_keyboard_event_dummy(rdpInput* input, UINT16 flags, UINT16 code)
+{
+}
+
+void wf_peer_unicode_keyboard_event_dummy(rdpInput* input, UINT16 flags, UINT16 code)
+{
+}
+
+void wf_peer_mouse_event_dummy(rdpInput* input, UINT16 flags, UINT16 x, UINT16 y)
+{
+}
+
+void wf_peer_extended_mouse_event_dummy(rdpInput* input, UINT16 flags, UINT16 x, UINT16 y)
+{
 }
